@@ -5,7 +5,7 @@ import UploadCard from './components/UploadCard';
 import LeadsTable from './components/LeadsTable';
 import StatsBar from './components/StatsBar';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://astracall-backend.onrender.com/api';
 
 export default function App() {
   const [leads, setLeads] = useState([]);
