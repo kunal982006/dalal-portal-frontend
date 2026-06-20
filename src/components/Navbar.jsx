@@ -1,4 +1,12 @@
-export default function Navbar() {
+import { supabase } from '../supabaseClient';
+
+export default function Navbar({ session }) {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const userEmail = session?.user?.email;
+
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -23,8 +31,8 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Status Indicator */}
-          <div className="flex items-center gap-4">
+          {/* Right Side — Status + User + Logout */}
+          <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -32,11 +40,29 @@ export default function Navbar() {
               </span>
               <span className="text-xs font-semibold text-emerald-700">System Online</span>
             </div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border border-slate-200">
-              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+
+            {/* User email badge */}
+            {userEmail && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/60">
+                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                <span className="text-xs font-medium text-slate-500 max-w-[140px] truncate">{userEmail}</span>
+              </div>
+            )}
+
+            {/* Logout Button */}
+            <button
+              id="logout-button"
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 border border-red-200/60 hover:bg-red-100 hover:border-red-300 transition-all duration-200 cursor-pointer"
+              title="Sign Out"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
               </svg>
-            </div>
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
         </div>
       </div>

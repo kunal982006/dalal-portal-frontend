@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { supabase } from './supabaseClient';
+import Login from './components/Login';
 import Navbar from './components/Navbar';
 import UploadCard from './components/UploadCard';
 import LeadsTable from './components/LeadsTable';
@@ -8,10 +10,29 @@ import StatsBar from './components/StatsBar';
 const API_BASE = 'https://astracall-backend.onrender.com/api';
 
 export default function App() {
+  const [session, setSession] = useState(undefined); // undefined = loading, null = no session
   const [leads, setLeads] = useState([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 
+  // ── Auth Listener ──────────────────────────
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+    });
+
+    // Listen for auth changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, currentSession) => {
+        setSession(currentSession);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // ── Leads Fetching ─────────────────────────
   const fetchLeads = useCallback(async () => {
     try {
       setFetchError(null);
@@ -26,15 +47,31 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!session) return; // Don't fetch if not logged in
     fetchLeads();
     // Poll every 15s for live updates
     const interval = setInterval(fetchLeads, 15000);
     return () => clearInterval(interval);
-  }, [fetchLeads]);
+  }, [fetchLeads, session]);
 
+  // ── Loading State ──────────────────────────
+  if (session === undefined) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-loading-spinner" />
+      </div>
+    );
+  }
+
+  // ── Auth Gate ──────────────────────────────
+  if (!session) {
+    return <Login />;
+  }
+
+  // ── Authenticated Dashboard ────────────────
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
-      <Navbar />
+      <Navbar session={session} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Stats Overview */}
