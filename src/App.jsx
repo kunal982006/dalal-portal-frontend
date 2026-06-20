@@ -6,10 +6,28 @@ import Navbar from './components/Navbar';
 import UploadCard from './components/UploadCard';
 import LeadsTable from './components/LeadsTable';
 import StatsBar from './components/StatsBar';
+import GodLogin from './components/GodLogin';
+import SuperAdmin from './components/SuperAdmin';
 
 const API_BASE = 'https://astracall-backend.onrender.com/api';
 
 export default function App() {
+  // ── Hidden God Mode Routes ─────────────────
+  const path = window.location.pathname;
+
+  if (path === '/god-login') {
+    return <GodLogin />;
+  }
+
+  if (path === '/god-dashboard') {
+    return <SuperAdmin apiBase={API_BASE} />;
+  }
+
+  // ── Regular Client App Below ───────────────
+  return <ClientDashboard />;
+}
+
+function ClientDashboard() {
   const [session, setSession] = useState(undefined); // undefined = loading, null = no session
   const [leads, setLeads] = useState([]);
   const [loadingLeads, setLoadingLeads] = useState(true);

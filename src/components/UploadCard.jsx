@@ -9,6 +9,48 @@ export default function UploadCard({ apiBase, onUploadSuccess }) {
   const [message, setMessage] = useState(null); // { type: 'success' | 'error', text: '' }
   const fileInputRef = useRef(null);
 
+  // Quick Dial State
+  const [quickDialName, setQuickDialName] = useState('');
+  const [quickDialPhone, setQuickDialPhone] = useState('');
+  const [quickDialing, setQuickDialing] = useState(false);
+  const [quickDialMessage, setQuickDialMessage] = useState(null);
+
+  const handleQuickDial = async (e) => {
+    e.preventDefault();
+    if (!quickDialName || !quickDialPhone) {
+      setQuickDialMessage({ type: 'error', text: 'Please fill out both fields.' });
+      return;
+    }
+
+    setQuickDialing(true);
+    setQuickDialMessage(null);
+
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user?.email) {
+        setQuickDialMessage({ type: 'error', text: 'Session expired. Please log in again.' });
+        setQuickDialing(false);
+        return;
+      }
+
+      const res = await axios.post(`${apiBase}/leads/single-dial`, {
+        email: user.email,
+        customerName: quickDialName,
+        phoneNumber: quickDialPhone
+      });
+
+      setQuickDialMessage({ type: 'success', text: res.data.message || 'Target added to queue!' });
+      setQuickDialName('');
+      setQuickDialPhone('');
+      onUploadSuccess?.();
+    } catch (err) {
+      const errMsg = err.response?.data?.error || 'Dial failed. Please try again.';
+      setQuickDialMessage({ type: 'error', text: errMsg });
+    } finally {
+      setQuickDialing(false);
+    }
+  };
+
   const resetForm = () => {
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -86,7 +128,9 @@ export default function UploadCard({ apiBase, onUploadSuccess }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Bulk Upload Section */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
       {/* Header */}
       <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
         <div className="flex items-center gap-3">
@@ -220,6 +264,97 @@ export default function UploadCard({ apiBase, onUploadSuccess }) {
           )}
         </button>
       </form>
+      </div>
+
+      {/* Quick Dial Section */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.671zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-5.834L6.166 6.166M14.25 14.25A2.25 2.25 0 1012 12a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Quick Dial</h2>
+              <p className="text-xs text-slate-400">Instantly add a single target to the queue</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleQuickDial} className="p-6 space-y-5 flex-1 flex flex-col">
+          <div className="space-y-4 flex-1">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Customer Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. John Doe"
+                value={quickDialName}
+                onChange={(e) => setQuickDialName(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                disabled={quickDialing}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Phone Number <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="tel"
+                placeholder="e.g. 9876543210"
+                value={quickDialPhone}
+                onChange={(e) => setQuickDialPhone(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                disabled={quickDialing}
+              />
+            </div>
+          </div>
+
+          {quickDialMessage && (
+            <div
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
+                quickDialMessage.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200/60'
+              }`}
+            >
+              {quickDialMessage.type === 'success' ? (
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+              )}
+              {quickDialMessage.text}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={quickDialing || !quickDialName || !quickDialPhone}
+            className="w-full mt-auto relative py-3 px-6 rounded-xl font-semibold text-sm text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:from-emerald-600 disabled:hover:to-teal-600 disabled:active:scale-100"
+          >
+            {quickDialing ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Dialing...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                Call Now 🚀
+              </span>
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
