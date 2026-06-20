@@ -1,11 +1,34 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { supabase } from '../supabaseClient';
 
-export default function Navbar({ session }) {
+export default function Navbar({ session, apiBase }) {
+  const [walletBalance, setWalletBalance] = useState(null);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
   const userEmail = session?.user?.email;
+
+  // Fetch wallet balance for the logged-in user
+  useEffect(() => {
+    if (!userEmail || !apiBase) return;
+
+    const fetchBalance = async () => {
+      try {
+        const res = await axios.get(`${apiBase}/leads/balance/${encodeURIComponent(userEmail)}`);
+        setWalletBalance(res.data.wallet_balance);
+      } catch {
+        setWalletBalance(null);
+      }
+    };
+
+    fetchBalance();
+    // Refresh balance every 30s
+    const interval = setInterval(fetchBalance, 30000);
+    return () => clearInterval(interval);
+  }, [userEmail, apiBase]);
 
   return (
     <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -31,8 +54,25 @@ export default function Navbar({ session }) {
             </div>
           </div>
 
-          {/* Right Side — Status + User + Logout */}
+          {/* Right Side — Wallet + Status + User + Logout */}
           <div className="flex items-center gap-3">
+            {/* Wallet Balance Badge */}
+            {walletBalance !== null && (
+              <div
+                className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-semibold text-xs transition-all ${
+                  walletBalance < 11.00
+                    ? 'bg-rose-50 border-rose-200/60 text-rose-700'
+                    : 'bg-emerald-50 border-emerald-200/60 text-emerald-700'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 6v3" />
+                </svg>
+                Wallet: ₹{parseFloat(walletBalance).toFixed(2)}
+                {walletBalance < 11.00 && ' (Low)'}
+              </div>
+            )}
+
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

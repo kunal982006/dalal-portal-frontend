@@ -94,7 +94,7 @@ export default function LeadsTable({ leads, loading, error, onRetry }) {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Client Name
+                  Email
                 </th>
                 <th className="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   Customer Name
@@ -135,7 +135,7 @@ export default function LeadsTable({ leads, loading, error, onRetry }) {
                     className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors duration-150"
                   >
                     <td className="px-6 py-3.5">
-                      <span className="text-sm font-semibold text-slate-800">{lead.client_name}</span>
+                      <span className="text-sm font-semibold text-slate-800">{lead.email}</span>
                     </td>
                     <td className="px-6 py-3.5">
                       <span className="text-sm text-slate-600">{lead.customer_name}</span>

@@ -1,49 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import axios from 'axios';
+import { supabase } from '../supabaseClient';
 
 export default function UploadCard({ apiBase, onUploadSuccess }) {
-  const [clientName, setClientName] = useState('');
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState(null); // { type: 'success' | 'error', text: '' }
-  const [balance, setBalance] = useState(null);
-  const [checkingBalance, setCheckingBalance] = useState(false);
   const fileInputRef = useRef(null);
 
-  const fetchBalance = async (name) => {
-    if (!name.trim()) {
-      setBalance(null);
-      return;
-    }
-    setCheckingBalance(true);
-    try {
-      const res = await axios.get(`${apiBase}/leads/balance/${encodeURIComponent(name.trim())}`);
-      setBalance(res.data.wallet_balance);
-    } catch (err) {
-      setBalance(null);
-    } finally {
-      setCheckingBalance(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!clientName.trim()) {
-      setBalance(null);
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(() => {
-      fetchBalance(clientName);
-    }, 600);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [clientName, apiBase]);
-
   const resetForm = () => {
-    setClientName('');
     setFile(null);
-    setBalance(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -82,10 +49,6 @@ export default function UploadCard({ apiBase, onUploadSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!clientName.trim()) {
-      setMessage({ type: 'error', text: 'Client Name is required.' });
-      return;
-    }
     if (!file) {
       setMessage({ type: 'error', text: 'Please select an Excel (.xlsx) file.' });
       return;
@@ -95,8 +58,16 @@ export default function UploadCard({ apiBase, onUploadSuccess }) {
     setMessage(null);
 
     try {
+      // Get the logged-in user's email from Supabase session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user?.email) {
+        setMessage({ type: 'error', text: 'Session expired. Please log in again.' });
+        setUploading(false);
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('client_name', clientName.trim());
+      formData.append('email', user.email);
       formData.append('file', file);
 
       const res = await axios.post(`${apiBase}/leads/upload`, formData, {
@@ -133,53 +104,6 @@ export default function UploadCard({ apiBase, onUploadSuccess }) {
 
       {/* Body */}
       <form onSubmit={handleSubmit} className="p-6 space-y-5">
-        {/* Client Name */}
-        <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <label htmlFor="client-name" className="block text-sm font-semibold text-slate-700">
-              Client Name <span className="text-rose-500">*</span>
-            </label>
-            {clientName.trim() && (
-              <div className="flex items-center gap-1.5 text-xs font-medium">
-                {checkingBalance ? (
-                  <span className="text-slate-400 animate-pulse flex items-center gap-1">
-                    <svg className="animate-spin h-3 w-3 text-slate-400" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Checking wallet...
-                  </span>
-                ) : balance !== null ? (
-                  <span
-                    className={`px-2 py-0.5 rounded-full border flex items-center gap-1 transition-all ${
-                      balance < 11.00
-                        ? 'bg-rose-50 border-rose-200 text-rose-700'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${balance < 11.00 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                    Wallet: ₹{parseFloat(balance).toFixed(2)}
-                    {balance < 11.00 && ' (Low)'}
-                  </span>
-                ) : (
-                  <span className="text-amber-600 font-semibold px-2 py-0.5 bg-amber-50 border border-amber-200/60 rounded-full">
-                    Client not in DB
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          <input
-            id="client-name"
-            type="text"
-            placeholder="e.g. Seth Enterprises Pvt Ltd"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            disabled={uploading}
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 transition-all duration-200 disabled:opacity-50"
-          />
-        </div>
-
         {/* File Upload */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">
@@ -274,7 +198,7 @@ export default function UploadCard({ apiBase, onUploadSuccess }) {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={uploading || !clientName.trim() || !file}
+          disabled={uploading || !file}
           id="upload-start-calling-btn"
           className="w-full relative py-3 px-6 rounded-xl font-semibold text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:from-blue-600 disabled:hover:to-indigo-600 disabled:active:scale-100"
         >

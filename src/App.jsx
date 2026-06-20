@@ -71,7 +71,7 @@ export default function App() {
   // ── Authenticated Dashboard ────────────────
   return (
     <div className="min-h-screen bg-[var(--color-surface)]">
-      <Navbar session={session} />
+      <Navbar session={session} apiBase={API_BASE} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Stats Overview */}
