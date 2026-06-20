@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { supabase } from './supabaseClient';
 import Login from './components/Login';
@@ -14,6 +14,27 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+
+  // ── Global Filter State ────────────────────
+  const [selectedBatch, setSelectedBatch] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+
+  const uniqueBatches = useMemo(() => {
+    if (!leads) return [];
+    const batches = new Set(leads.map(l => l.batch_id).filter(Boolean));
+    return Array.from(batches);
+  }, [leads]);
+
+  useEffect(() => {
+    if (uniqueBatches.length > 0 && selectedBatch === 'All' && !uniqueBatches.includes('All')) {
+      setSelectedBatch(uniqueBatches[0]);
+    }
+  }, [uniqueBatches, selectedBatch]);
+
+  const leadsFilteredByBatch = useMemo(() => {
+    if (selectedBatch === 'All') return leads;
+    return leads.filter(l => l.batch_id === selectedBatch);
+  }, [leads, selectedBatch]);
 
   // ── Auth Listener ──────────────────────────
   useEffect(() => {
@@ -76,7 +97,12 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Stats Overview */}
         <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <StatsBar leads={leads} loading={loadingLeads} />
+          <StatsBar 
+            leads={leadsFilteredByBatch} 
+            loading={loadingLeads} 
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
+          />
         </div>
 
         {/* Upload Section */}
@@ -86,7 +112,16 @@ export default function App() {
 
         {/* Leads Table */}
         <div className="animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-          <LeadsTable leads={leads} loading={loadingLeads} error={fetchError} onRetry={fetchLeads} />
+          <LeadsTable 
+            leads={leads} 
+            loading={loadingLeads} 
+            error={fetchError} 
+            onRetry={fetchLeads}
+            selectedBatch={selectedBatch}
+            setSelectedBatch={setSelectedBatch}
+            uniqueBatches={uniqueBatches}
+            selectedStatus={selectedStatus}
+          />
         </div>
       </main>
 

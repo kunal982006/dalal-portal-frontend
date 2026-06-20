@@ -53,7 +53,7 @@ const stats = [
   },
 ];
 
-export default function StatsBar({ leads, loading }) {
+export default function StatsBar({ leads, loading, selectedStatus, setSelectedStatus }) {
   const getCount = (filter) => {
     if (!filter) return leads.length;
     return leads.filter((l) => l.status === filter).length;
@@ -61,13 +61,20 @@ export default function StatsBar({ leads, loading }) {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map((stat) => (
-        <div
-          key={stat.key}
-          className="group relative bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
-        >
-          {/* Decorative gradient bar */}
-          <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color} opacity-80`} />
+      {stats.map((stat) => {
+        const isSelected = (stat.filter || 'ALL') === selectedStatus;
+        return (
+          <div
+            key={stat.key}
+            onClick={() => setSelectedStatus(stat.filter || 'ALL')}
+            className={`group relative bg-white rounded-2xl p-5 transition-all duration-300 overflow-hidden cursor-pointer ${
+              isSelected
+                ? 'border-2 border-indigo-500 shadow-lg shadow-indigo-500/20 scale-[1.02] ring-1 ring-indigo-500/50'
+                : 'border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+            }`}
+          >
+            {/* Decorative gradient bar */}
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color} ${isSelected ? 'opacity-100' : 'opacity-80'}`} />
 
           <div className="flex items-center justify-between">
             <div>
@@ -87,7 +94,8 @@ export default function StatsBar({ leads, loading }) {
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
